@@ -24,8 +24,6 @@ public class Services {
 
     int aMaxX = 6300;
     int aMaxY = 8200;
-//    int uMaxX = 690;
-//    int uMaxY = 960;
 
 //    int uMaxX = 841;
 //    int uMaxY = 646;
@@ -100,12 +98,7 @@ public class Services {
     @RequestMapping(value = "tags/{tagId}/history")
     public List<ItcsTagReadHistory> getGuestHistory(@PathVariable("tagId") String tagId) {
         List<ItcsTagReadHistory> itc = itcsTagReadHistoryRepository.findGuestLocation(tagId);
-        System.out.println("=================================================================");
-//        log.info("get All values :"+itc.get(0).toString());
-//        ItcsTagReadHistory obj = (ItcsTagReadHistory)itc.get(0);
-        log.info("Result coming  : "+ itc.toString());
         log.info("return list size::" + itc.size());
-
         return itc;
     }
 
