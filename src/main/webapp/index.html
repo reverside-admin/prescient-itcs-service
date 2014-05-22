@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html ng-app="springBootApp">
+<head>
+    <title>Spring Boot App</title>
+
+    <meta charset="utf-8">
+    <title>Bootstrap, from Twitter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <script type="text/javascript" src="lib/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript" src="lib/bootstrap.min.js"></script>
+    <script type='text/javascript' src='lib/angular.min.js'></script>
+
+    <script type="text/javascript">
+
+        var springBootApp = angular.module("springBootApp", []);
+
+        springBootApp.controller("springBootMappingsCtrl", function ($scope, $http) {
+
+            $scope.data = [];
+
+
+            $scope.invoke = function (index) {
+                console.log('Invoke API' + index);
+                var api = $scope.data[i];
+                var url = "";
+                for (var i = 0; i < $scope.data[index].parts.length; i++) {
+                    url = url + "/" + $scope.data[index].parts[i].value;
+                }
+                console.log(url);
+                method = $scope.data[index].method;
+                request = $scope.data[index].request;
+
+                $http({
+                    url: url,
+                    method: method,
+                    header: {},
+                    data: request
+                })
+                        .success(function (data, status) {
+
+                            console.log(status);
+                            console.log(data);
+                            $scope.data[index]["response"]["status"] = status;
+                            $scope.data[index]["response"]["data"] = data;
+
+
+                        })
+                        .error(function (error, status) {
+                            console.log(status);
+                            console.log(error);
+                            $scope.data[index].response["status"] = status;
+                            $scope.data[index].response["data"] = error;
+
+                        });
+
+            };
+
+            $scope.init = function () {
+                $http({
+                    url: "/mappings",
+                    method: "get",
+                    header: {}
+                })
+                        .success(function (data, status) {
+                            $.each(data, function (k, v) {
+                                var item = {};
+                                var url;
+                                var method;
+                                if (k.charCodeAt(0) != 47) { // check not starts with forward slash
+                                    var meta = k.slice(1, k.length - 1);
+                                    var metaParts = meta.split(",");
+                                    url = metaParts[0].slice(1, metaParts[0].length - 1);
+                                    method = (metaParts[1].split('='))[1].slice(1, (metaParts[1].split('=')[1]).length - 1);
+                                    if (method == '') method = "GET";
+
+                                    var urlParts = url.split('/');
+                                    var parts = [];
+                                    var hasDynamicParts = false;
+                                    for (var i = 1; i < urlParts.length; i++) {
+                                        var urlPart = {};
+                                        urlPart["value"] = urlParts[i];
+                                        if (urlParts[i].charAt(0) == '{') {
+                                            urlPart["type"] = "dynamic";
+                                            hasDynamicParts = true;
+                                        } else {
+                                            urlPart["type"] = "static";
+                                        }
+                                        console.log(urlPart);
+                                        parts.push(urlPart);
+                                    }
+
+                                    item["url"] = url;
+                                    item["method"] = method;
+                                    item["parts"] = parts;
+                                    item["hasDynamicParts"] = hasDynamicParts;
+                                    item["response"] = {};
+                                    console.log(item);
+                                    if ((url == "/error") ||
+                                            (url == "/autoconfig") ||
+                                            (url == "/mappings") ||
+                                            (url == "/beans") ||
+                                            (url == "/metrics/{name:.*}") ||
+                                            (url == "/metrics") ||
+                                            (url == "/env/{name:.*}") ||
+                                            (url == "/env") ||
+                                            (url == "/trace") ||
+                                            (url == "/info") ||
+                                            (url == "/health") ||
+                                            (url == "/jolokia/**") ||
+                                            (url == "/configprops") ||
+                                            (url == "/dump")) {
+
+                                    } else {
+                                        $scope.data.push(item);
+                                    }
+                                } else {
+                                    url = k;
+                                    method = "GET";
+                                    //console.log(k);
+                                }
+
+                                console.log("Complete init")
+                            });
+
+                        })
+                        .error(function (error, status) {
+                            console.error(status);
+                        });
+            };
+
+            $scope.parse = function () {
+                console.log($scope.data);
+
+            };
+
+
+        });
+
+    </script>
+
+</head>
+
+<body ng-init="init()" ng-controller="springBootMappingsCtrl">
+
+<div class="container">
+
+    <h1>API Sandbox</h1>
+
+    <div class="panel-group" id="accordion">
+
+        <div class="panel panel-default" ng-repeat="item in data" heading="[{{item.method}}] {{item.url}}">
+
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" data-parent="#accordion" href="#{{$index}}">
+                        {{item.method}} : {{item.url}}
+                    </a>
+                </h4>
+            </div>
+
+            <div id="{{$index}}" class="panel-collapse collapse">
+
+                <div class="panel-body">
+
+                    <div class="row">
+                        <div class="col-md-6 text-left">
+                            <h2 class="text-primary">
+                                <span ng-repeat="part in item.parts">/{{part.value}}</span>
+                            </h2>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <h2 class="text-primary">
+                                <span class="label label-default btn" ng-click="invoke($index)">{{item.method}}</span>
+                            </h2>
+                        </div>
+                    </div>
+
+                    <div class="row" ng-if="item.method == 'POST' || item.method == 'PUT'">
+                        <div class="col-md-12 text-left">
+                            <textarea ng-model="item.request" class="form-control" disabled></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 text-left">
+
+                            <div class="row-md-6" ng-if="item.hasDynamicParts">
+                                <label class="control-label text-primary">Path Values</label>
+                            </div>
+
+                            <div class="row-md-6" ng-repeat="part in item.parts">
+                                <input ng-if="part.type == 'dynamic'" ng-model="part.value" type="text"
+                                       class="form-control"/>
+                            </div>
+
+                            <div class="row-md-6" ng-if="item.method == 'POST' || item.method == 'PUT'">
+                                <label class="control-label text-primary">Request Body</label>
+                            </div>
+
+                            <div class="row-md-6" ng-if="item.method == 'POST' || item.method == 'PUT'">
+                                <textarea ng-model="item.request" type="text" class="form-control"></textarea>
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-6 text-left">
+                            <div class="row-md-6">
+                                <h2 class="text-primary">
+                                    <span class="label label-default">Status</span>
+                                    <span class="label label-default">{{item.response.status}}</span>
+                                </h2>
+                            </div>
+                            <div class="row-md-6">
+                                <textarea class="form-control" disabled>{{item.response.data}}</textarea>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+</body>
+
+</html>
